@@ -4,6 +4,13 @@ A cute lil experiment at building a signcryption scheme out of post-quantum cryp
 (i.e. ML-KEM-786, ML-DSA-65, a KDF, and an AEAD or your fave IND-CPA stream cipher and a PRF-secure
 MAC).
 
+## CAUTION
+
+⚠️ You should not use this. ⚠️
+
+Neither the design nor the implementation of this library have been independently evaluated. The
+design is documented here; read it and see if the arguments therein are convincing.
+
 ## The Security Model
 
 This scheme aims to be both confidential and unforgeable in the multi-user insider model for
