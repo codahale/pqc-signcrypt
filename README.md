@@ -1,7 +1,8 @@
 # pqc-signcrypt
 
 A cute lil experiment at building a signcryption scheme out of post-quantum cryptography algorithms
-(i.e. ML-KEM-786, ML-DSA-65, and an AEAD or your fave IND-CPA stream cipher and an sUF-CMA MAC).
+(i.e. ML-KEM-786, ML-DSA-65, a KDF, and an AEAD or your fave IND-CPA stream cipher and a PRF-secure
+MAC).
 
 ## The Security Model
 
