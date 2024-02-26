@@ -37,10 +37,9 @@ signature:
 
 ```rust
 fn encrypt_and_sign(ek: &EncryptingKey, sk: &SigningKey, m: &[u8]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend(encrypt(ek, m));
-    out.extend(sign(sk, m));
-    out
+    let c = encrypt(ek, m);
+    let s = sign(sk, m);
+    [c, s].concat()
 }
 ```
 
@@ -56,11 +55,9 @@ signature.
 
 ```rust
 fn encrypt_then_sign(ek: &EncryptingKey, sk: &SigningKey, m: &[u8]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend(encrypt(ek, m));
-    let sig = sign(sk, &out);
-    out.extend(sig);
-    out
+    let c = encrypt(ek, m);
+    let s = sign(sk, c);
+    [c, s].concat()
 }
 ```
 
@@ -82,11 +79,8 @@ two to produce the ciphertext.
 
 ```rust
 fn sign_then_encrypt(ek: &EncryptingKey, sk: &SigningKey, m: &[u8]) -> Vec<u8> {
-    let sig = sign(sk, m);
-    let mut out = Vec::new();
-    out.extend(m);
-    out.extend(sig);
-    encrypt(ek, out)
+    let s = sign(sk, m);
+    encrypt(ek, [m, s].concat())
 }
 ```
 
