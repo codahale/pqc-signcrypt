@@ -199,10 +199,15 @@ sUF-CMA-secure.
 
 ## Implementation
 
-This implementation uses [Lockstitch](https://github.com/codahale/lockstitch), which doesn't do
-_exactly_ what I described but is functionally equivalent. It uses ML-KEM-768 for the KEM, ML-DSA-65
-for the signature, TurboSHAKE128 for the KDF, and AEGIS-128L for both the encryption and MAC. It's
-not as easy to describe but is easier to implement.
+This repo has two implementations, both of which use ML-KEM-786 and ML-DSA-65 as the KEM and
+signature algorithms, respectively.
+
+First, a generic implementation which uses HKDF-SHA-256, HMAC-SHA-256, and AES-128-CTR. This tracks
+with the described scheme pretty closely.
+
+Second, a protocol implementation which uses [Lockstitch](https://github.com/codahale/lockstitch),
+which doesn't do _exactly_ what I described but is functionally equivalent (and much easier to
+implement and understand IMO).
 
 ## License
 
