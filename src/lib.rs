@@ -40,29 +40,25 @@ pub fn signcrypt(sender: &PrivateKey, receiver: &PublicKey, m: &[u8]) -> Vec<u8>
     proto.mix("receiver-vk", receiver.vk.as_bytes());
 
     // Encapsulate a random key with the receiver's encryption key and mix in the shared secret.
-    let (k, ct) = kyber768::encapsulate(&receiver.ek);
-    proto.mix("encapsulated-key", ct.as_bytes());
+    let (k, c0) = kyber768::encapsulate(&receiver.ek);
+    proto.mix("encapsulated-key", c0.as_bytes());
     proto.mix("shared-secret", k.as_bytes());
 
-    // Allocate an output buffer and append the KEM ciphertext to it.
-    let mut out = Vec::new();
-    out.extend_from_slice(ct.as_bytes());
-    out.extend_from_slice(m);
-
     // Encrypt the message, making future protocol outputs dependent on it.
-    proto.encrypt("message", &mut out[kyber768::ciphertext_bytes()..]);
+    let mut c1 = m.to_vec();
+    proto.encrypt("message", &mut c1);
 
     // Derive a challenge value to be signed.
     let challenge = proto.derive_array::<32>("challenge");
 
     // Sign the challenge value with the sender's signing key.
-    let sig = dilithium3::detached_sign(&challenge, &sender.sk);
+    let mut c2 = dilithium3::detached_sign(&challenge, &sender.sk).as_bytes().to_vec();
 
-    // Encrypt the signature and append it to the output.
-    out.extend_from_slice(sig.as_bytes());
-    proto.encrypt("signature", &mut out[kyber768::ciphertext_bytes() + m.len()..]);
+    // Encrypt the signature.
+    proto.encrypt("signature", &mut c2);
 
-    out
+    // Return the encapsulated key, encrypted message, and encrypted signature.
+    [c0.as_bytes(), &c1, &c2].concat()
 }
 
 pub fn unsigncrypt(receiver: &PrivateKey, sender: &PublicKey, c: &[u8]) -> Option<Vec<u8>> {
