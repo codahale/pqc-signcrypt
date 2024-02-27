@@ -206,8 +206,11 @@ First, a generic implementation which uses HKDF-SHA-256, HMAC-SHA-256, and AES-1
 with the described scheme pretty closely.
 
 Second, a protocol implementation which uses [Lockstitch](https://github.com/codahale/lockstitch),
-which doesn't do _exactly_ what I described but is functionally equivalent (and much easier to
-implement and understand IMO).
+which doesn't do _exactly_ what I described but is functionally equivalent. Lockstitch uses
+TurboSHAKE128 and AEGIS-128L to provide a stateful object for symmetric key operations. As a result,
+the implementation is simpler, easier to audit, and much faster. (Instead of using AES-128-CTR to
+encrypt the message and calculating a hash of the ciphertext, it uses AEGIS-128L to encrypt the
+message and uses a hash of the tag as the MAC.)
 
 ## License
 
