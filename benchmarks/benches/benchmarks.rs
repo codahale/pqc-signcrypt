@@ -1,32 +1,55 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use pqc_signcrypt::{generic, keypair, protocol};
+
+const LENS: &[(usize, &str)] =
+    &[(16, "16B"), (256, "256B"), (1024, "1KiB"), (16 * 1024, "16KiB"), (1024 * 1024, "1MiB")];
 
 fn bench_signcrypt(c: &mut Criterion) {
     let (x, y) = (keypair(), keypair());
-    let message = b"this is a message";
     let mut g = c.benchmark_group("signcrypt");
-    g.bench_function("generic", |b| {
-        b.iter(|| generic::signcrypt(&x, &y.public_key, message));
-    });
-    g.bench_function("lockstitch", |b| {
-        b.iter(|| protocol::signcrypt(&x, &y.public_key, message));
-    });
+
+    for &(len, id) in LENS {
+        let input = vec![0u8; len];
+        g.throughput(Throughput::Bytes(len as u64));
+        g.bench_function(format!("gen/{id}"), |b| {
+            b.iter(|| generic::signcrypt(&x, &y.public_key, &input));
+        });
+    }
+
+    for &(len, id) in LENS {
+        let input = vec![0u8; len];
+        g.throughput(Throughput::Bytes(len as u64));
+        g.bench_function(format!("pro/{id}"), |b| {
+            b.iter(|| protocol::signcrypt(&x, &y.public_key, &input));
+        });
+    }
+
     g.finish();
 }
 
 fn bench_unsigncrypt(c: &mut Criterion) {
     let (x, y) = (keypair(), keypair());
-    let message = b"this is a message";
     let mut g = c.benchmark_group("unsigncrypt");
-    let ciphertext = generic::signcrypt(&x, &y.public_key, message);
-    g.bench_function("generic", |b| {
-        b.iter(|| generic::unsigncrypt(&y, &x.public_key, &ciphertext));
-    });
 
-    let ciphertext = protocol::signcrypt(&x, &y.public_key, message);
-    g.bench_function("lockstitch", |b| {
-        b.iter(|| protocol::unsigncrypt(&y, &x.public_key, &ciphertext));
-    });
+    for &(len, id) in LENS {
+        let input = vec![0u8; len];
+        let ciphertext = generic::signcrypt(&x, &y.public_key, &input);
+        g.throughput(Throughput::Bytes(len as u64));
+        g.bench_function(format!("gen/{id}"), |b| {
+            b.iter(|| generic::unsigncrypt(&y, &x.public_key, &ciphertext));
+        });
+    }
+
+    for &(len, id) in LENS {
+        let input = vec![0u8; len];
+        let ciphertext = generic::signcrypt(&x, &y.public_key, &input);
+        g.throughput(Throughput::Bytes(len as u64));
+        g.bench_function(format!("pro/{id}"), |b| {
+            b.iter(|| protocol::unsigncrypt(&y, &x.public_key, &ciphertext));
+        });
+    }
+
+    g.finish();
 }
 
 criterion_group!(benches, bench_signcrypt, bench_unsigncrypt);
