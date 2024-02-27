@@ -133,7 +133,8 @@ fn signcrypt(sender: &PrivateKey, receiver: &PublicKey, m: &[u8]) -> Vec<u8> {
     // Sign the MAC.
     let sig = sign(sender.sk, h0);
 
-    // Encrypt the signature.
+    // Encrypt the signature (actually, use the same cipher instance as for c1 to avoid re-using the
+    // keystream).
     let c2 = encrypt(k1, sig);
 
     // Return the KEM ciphertext, the encrypted message, and the encrypted signature.
