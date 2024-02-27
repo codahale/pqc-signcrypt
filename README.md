@@ -212,6 +212,12 @@ the implementation is simpler, easier to audit, and much faster. (Instead of usi
 encrypt the message and calculating a hash of the ciphertext, it uses AEGIS-128L to encrypt the
 message and uses a hash of the tag as the MAC.)
 
+## But Make It Hybrid
+
+Securing this scheme against potential vulnerabilities in ML-KEM and ML-DSA is pretty
+straight-forward: add X25519/Ed25519 keys to the public/private keys, add an ephemeral X25519 key
+exchange as an input to the KDF, use Ed25519 to sign the MAC and then ML-DSA to sign that signature.
+
 ## License
 
 Copyright © 2024 Coda Hale
