@@ -1,6 +1,5 @@
 use pqcrypto::{kem::kyber768, sign::dilithium3};
 
-pub mod desig;
 pub mod generic;
 pub mod protocol;
 
