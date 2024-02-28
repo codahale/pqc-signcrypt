@@ -29,25 +29,27 @@ pub fn signcrypt(sender: &PrivateKey, receiver: &PublicKey, m: &[u8]) -> Vec<u8>
 
     // Derive two keys.
     let (_, prk) = hkdf.finalize();
-    let (mut k1, mut k2) = ([0u8; 16], [0u8; 16]);
+    let (mut k1, mut k2, mut k3) = ([0u8; 16], [0u8; 16], [0u8; 16]);
     prk.expand(b"confidentiality", &mut k1).expect("should expand successfully");
     prk.expand(b"authenticity", &mut k2).expect("should expand successfully");
+    prk.expand(b"privacy", &mut k3).expect("should expand successfully");
 
     // Encrypt the message.
-    let mut cipher = Ctr64LE::<aes::Aes128>::new(&k1.into(), &[0u8; 16].into());
     let mut c1 = m.to_vec();
-    cipher.apply_keystream(&mut c1);
+    Ctr64LE::<aes::Aes128>::new(&k1.into(), &[0u8; 16].into()).apply_keystream(&mut c1);
 
     // Calculate an HMAC of the ciphertext.
-    let mut hmac = Hmac::<Sha256>::new_from_slice(&k2).expect("should create an HMAC");
-    hmac.update(&c1);
-    let mac = hmac.finalize().into_bytes();
+    let mac = Hmac::<Sha256>::new_from_slice(&k2)
+        .expect("should create an HMAC")
+        .chain_update(&c1)
+        .finalize()
+        .into_bytes();
 
     // Sign the MAC with the sender's signing key.
     let mut c2 = dilithium3::detached_sign(&mac, &sender.sk).as_bytes().to_vec();
 
     // Encrypt the signature.
-    cipher.apply_keystream(&mut c2);
+    Ctr64LE::<aes::Aes128>::new(&k3.into(), &[0u8; 16].into()).apply_keystream(&mut c2);
 
     // Return the encapsulated key, encrypted message, and encrypted signature.
     [c0.as_bytes(), &c1, &c2].concat()
@@ -75,21 +77,23 @@ pub fn unsigncrypt(receiver: &PrivateKey, sender: &PublicKey, c: &[u8]) -> Optio
 
     // Derive two keys.
     let (_, prk) = hkdf.finalize();
-    let (mut k1, mut k2) = ([0u8; 16], [0u8; 16]);
+    let (mut k1, mut k2, mut k3) = ([0u8; 16], [0u8; 16], [0u8; 16]);
     prk.expand(b"confidentiality", &mut k1).expect("should expand successfully");
     prk.expand(b"authenticity", &mut k2).expect("should expand successfully");
+    prk.expand(b"privacy", &mut k3).expect("should expand successfully");
 
     // Calculate an HMAC of the ciphertext.
-    let mut hmac = Hmac::<Sha256>::new_from_slice(&k2).expect("should create an HMAC");
-    hmac.update(c1);
-    let mac = hmac.finalize().into_bytes();
+    let mac = Hmac::<Sha256>::new_from_slice(&k2)
+        .expect("should create an HMAC")
+        .chain_update(&c1)
+        .finalize()
+        .into_bytes();
 
     // Decrypt the message.
-    let mut cipher = Ctr64LE::<aes::Aes128>::new(&k1.into(), &[0u8; 16].into());
-    cipher.apply_keystream(c1);
+    Ctr64LE::<aes::Aes128>::new(&k1.into(), &[0u8; 16].into()).apply_keystream(c1);
 
     // Decrypt the signature.
-    cipher.apply_keystream(c2);
+    Ctr64LE::<aes::Aes128>::new(&k3.into(), &[0u8; 16].into()).apply_keystream(c2);
 
     let sig = dilithium3::DetachedSignature::from_bytes(c2).ok()?;
     dilithium3::verify_detached_signature(&sig, &mac, &sender.vk).is_ok().then(|| c1.to_vec())

@@ -123,6 +123,7 @@ fn signcrypt(sender: &PrivateKey, receiver: &PublicKey, m: &[u8]) -> Vec<u8> {
     // Derive two symmetric keys from the parties' identities, the encapsulated key, and the shared secret.
     let k1 = kdf(sender.public_key, receiver, c0, k0, "confidentiality");
     let k2 = kdf(sender.public_key, receiver, c0, k0, "authenticity");
+    let k3 = kdf(sender.public_key, receiver, c0, k0, "privacy");
 
     // Encrypt the plaintext using the first symmetric key.
     let c1 = encrypt(k1, m);
@@ -133,14 +134,17 @@ fn signcrypt(sender: &PrivateKey, receiver: &PublicKey, m: &[u8]) -> Vec<u8> {
     // Sign the MAC.
     let sig = sign(sender.sk, h0);
 
-    // Encrypt the signature (actually, use the same cipher instance as for c1 to avoid re-using the
-    // keystream).
-    let c2 = encrypt(k1, sig);
+    // Encrypt the signature.
+    let c2 = encrypt(k3, sig);
 
     // Return the KEM ciphertext, the encrypted message, and the encrypted signature.
     [c0, c1, c2].concat()
 }
 ```
+
+To unsigncrypt a message, the encapsulated key is decapsulated, the three symmetric keys derived,
+the MAC calculated, the plaintext decrypted, the signature decrypted, and finally the signature
+verified against the re-calculated MAC.
 
 ### IND-CCA2 Security
 
