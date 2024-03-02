@@ -61,29 +61,28 @@ pub fn unsigncrypt(receiver: &PrivateKey, sender: &PublicKey, c: &[u8]) -> Optio
     proto.mix("receiver-vk", receiver.public_key.vk.as_bytes());
 
     // Create a mutable copy of the ciphertext and split it up.
-    let mut out = c.to_vec();
-    let (en, m) = out.split_at_mut(kyber768::ciphertext_bytes());
-    let (m, sig) = m.split_at_mut(m.len() - dilithium3::signature_bytes());
+    let mut c = c.to_vec();
+    let (c0, c1) = c.split_at_mut(kyber768::ciphertext_bytes());
+    let (c1, c2) = c1.split_at_mut(c1.len() - dilithium3::signature_bytes());
 
     // Decapsulate the shared secret with the receiver's decryption key and mix in the shared
     // secret.
-    let en = kyber768::Ciphertext::from_bytes(en).ok()?;
-    let k = kyber768::decapsulate(&en, &receiver.dk);
-    proto.mix("encapsulated-key", en.as_bytes());
+    let k = kyber768::decapsulate(&kyber768::Ciphertext::from_bytes(c0).ok()?, &receiver.dk);
+    proto.mix("encapsulated-key", c0);
     proto.mix("shared-secret", k.as_bytes());
 
     // Decrypt the message in place.
-    proto.decrypt("message", m);
+    proto.decrypt("message", c1);
 
     // Derive a challenge value to check the signature.
     let challenge = proto.derive_array::<32>("challenge");
 
     // Decrypt the signature.
-    proto.decrypt("signature", sig);
+    proto.decrypt("signature", c2);
 
     // Verify the signature, returning the plaintext if valid.
-    let sig = dilithium3::DetachedSignature::from_bytes(sig).ok()?;
-    dilithium3::verify_detached_signature(&sig, &challenge, &sender.vk).is_ok().then(|| m.to_vec())
+    let sig = dilithium3::DetachedSignature::from_bytes(c2).ok()?;
+    dilithium3::verify_detached_signature(&sig, &challenge, &sender.vk).is_ok().then(|| c1.to_vec())
 }
 
 #[cfg(test)]
